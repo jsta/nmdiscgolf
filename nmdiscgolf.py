@@ -1,10 +1,12 @@
 import re
+import urllib
 import twitter
 import requests
 import datetime
 import pandas as pd
 from colorama import Fore
 from bs4 import BeautifulSoup
+from geopy.distance import distance
 
 import config
 
@@ -12,7 +14,18 @@ tweet = True
 interactive = False
 
 
-def get_tourneys(date=None):
+def _get_coords(x):
+    url = (
+        "https://nominatim.openstreetmap.org/search/"
+        + urllib.parse.quote(x)
+        + "?format=json"
+    )
+    response = requests.get(url).json()
+    return (response[0]["lat"], response[0]["lon"])
+
+
+def get_tourneys(date=None, state="NM"):
+    # date = None
     if date is None:
         date_raw = datetime.date.today()
         date = str(date_raw)
@@ -28,7 +41,8 @@ def get_tourneys(date=None):
         + date
         + "&date_filter%5Bmax%5D%5Bdate%5D="
         + end_date
-        + "&State%5B%5D=NM"
+        + "&State%5B%5D="
+        + state
     )
 
     response = requests.get(baseurl)
@@ -53,13 +67,23 @@ def get_tourneys(date=None):
     res = pd.DataFrame([names, dates, locations, links]).T
     res.columns = ["name", "date", "location", "link"]
 
+    # filter by distance from Santa Fe
+    coords_sf = (35.665, -105.947)
+    coords_res = [_get_coords(x) for x in res["location"]]
+    distances = [distance(coords_sf, x).mi for x in coords_res]
+    res["distance"] = distances
+    res = res[res["distance"] < 200]
+    res = res.drop(columns=["distance"])
+
     res = [" | ".join(res.iloc[i]) for i in range(0, res.shape[0])]
     res = pd.DataFrame(res, columns=["slug"])
 
     return res
 
 
-tourneys = get_tourneys()
+tourneys = pd.concat(
+    [get_tourneys(state="NM"), get_tourneys(state="CO")], axis=0
+).reset_index(drop=True)
 
 log = pd.read_csv("log.csv")
 res = tourneys[~tourneys["slug"].isin(log["slug"])]
