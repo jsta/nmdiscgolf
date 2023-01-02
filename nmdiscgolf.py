@@ -11,25 +11,42 @@ import config
 tweet = True
 interactive = False
 
-def get_tourneys():
-    baseurl = 'https://www.pdga.com/tour/search?OfficialName=&td=&date_filter%5Bmin%5D%5Bdate%5D=2023-01-01&date_filter%5Bmax%5D%5Bdate%5D=2024-01-01&State%5B%5D=NM'
+
+def get_tourneys(date=None):
+    if date is None:
+        date_raw = datetime.date.today()
+        date = str(date_raw)
+    else:
+        date_raw = datetime.datetime.strptime(date, "%Y-%m-%d")
+
+    end_date = str(
+        date_raw.replace(year=int(datetime.datetime.strftime(date_raw, "%Y")) + 1)
+    ).split(" ")[0]
+
+    baseurl = (
+        "https://www.pdga.com/tour/search?OfficialName=&td=&date_filter%5Bmin%5D%5Bdate%5D="
+        + date
+        + "&date_filter%5Bmax%5D%5Bdate%5D="
+        + end_date
+        + "&State%5B%5D=NM"
+    )
 
     response = requests.get(baseurl)
-    soup = BeautifulSoup(response.text, 'html.parser')
+    soup = BeautifulSoup(response.text, "html.parser")
 
-    locations = soup.findAll('td', class_="views-field-Location")
+    locations = soup.findAll("td", class_="views-field-Location")
     _get_locations = lambda x: re.findall(r'(?<=Location"\>\n)(.*)(?=\s\<\/td)', x)
     locations = [_get_locations(str(x))[0] for x in locations]
 
-    dates = soup.findAll('td', class_="views-field-StartDate")
+    dates = soup.findAll("td", class_="views-field-StartDate")
     _get_dates = lambda x: re.findall(r'(?<=StartDate"\>\n)(.*)(?=\s\<\/td)', x)
     dates = [_get_dates(str(x))[0] for x in dates]
 
-    names = soup.findAll('td', class_="views-field-OfficialName")
+    names = soup.findAll("td", class_="views-field-OfficialName")
     _get_names = lambda x: re.findall(r'(?<="\>)(.*)(?=\<\/a)', x)
     names = [_get_names(str(x))[0] for x in names]
 
-    links = soup.findAll('td', class_="views-field-OfficialName")
+    links = soup.findAll("td", class_="views-field-OfficialName")
     _get_link = lambda x: re.findall(r'(?<=\<a href=")(.*)(?=")', x)
     links = ["https://www.pdga.com" + _get_link(str(x))[0] for x in links]
 
@@ -52,7 +69,7 @@ res = res.sample(frac=1)
 slugs = res["slug"]
 print(Fore.GREEN + "Filtered: ")
 print()
-for slug in slugs:    
+for slug in slugs:
     print(Fore.GREEN + slug)
     print()
 
@@ -70,7 +87,7 @@ if tweet is True or interactive is True:
         # write to log
         keys = ["slug", "date"]
         slug = res.iloc[i]["slug"]
-        date = str(datetime.date.today())        
+        date = str(datetime.date.today())
         d = dict(zip(keys, [slug, date]))
 
         d = pd.DataFrame.from_records(d, index=[0])
