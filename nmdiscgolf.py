@@ -98,16 +98,16 @@ for slug in slugs:
     print()
 
 if tweet is True or interactive is True:
-    # api = twitter.Api(
-    #     consumer_key=config.api_key,
-    #     consumer_secret=config.api_secret_key,
-    #     access_token_key=config.access_token_key,
-    #     access_token_secret=config.access_token_secret,
-    # )
+    api = twitter.Api(
+        consumer_key=config.api_key,
+        consumer_secret=config.api_secret_key,
+        access_token_key=config.access_token_key,
+        access_token_secret=config.access_token_secret,
+    )
     # api.VerifyCredentials()
 
     for i in range(len(res)):
-        # status = api.PostUpdate(slug)
+        status = api.PostUpdate(slug)
         # write to log
         keys = ["slug", "date"]
         slug = res.iloc[i]["slug"]
